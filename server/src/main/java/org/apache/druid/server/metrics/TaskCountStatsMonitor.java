@@ -20,6 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -35,7 +36,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
 
   @Inject
   public TaskCountStatsMonitor(
-      TaskCountStatsProvider statsProvider
+          TaskCountStatsProvider statsProvider
   )
   {
     this.statsProvider = statsProvider;
@@ -53,20 +54,21 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     CoordinatorRunStats stats = statsProvider.getStats();
     if (stats != null) {
       stats.forEachStat(
-          (stat, dimensions, statValue)
-              -> emit(emitter, stat, dimensions.getValues(), statValue)
+              (stat, dimensions, statValue)
+                      -> emit(emitter, stat, dimensions.getValues(), statValue)
       );
     }
 
     return true;
   }
 
-  private void emit(ServiceEmitter emitter, String key, Map<String, Long> counts)
+  private void emit(ServiceEmitter emitter, String key, Map<Pair<String, String>, Long> counts)
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     if (counts != null) {
       counts.forEach((k, v) -> {
-        builder.setDimension("dataSource", k);
+        builder.setDimension("dataSource", k.lhs);
+        builder.setDimension("taskType", k.rhs);
         emitter.emit(builder.setMetric(key, v));
       });
     }
@@ -80,7 +82,7 @@ public class TaskCountStatsMonitor extends AbstractMonitor
 
     ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder();
     dimensionValues.forEach(
-        (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
+            (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
     );
     emitter.emit(eventBuilder.setMetric(stat.getMetricName(), value));
   }

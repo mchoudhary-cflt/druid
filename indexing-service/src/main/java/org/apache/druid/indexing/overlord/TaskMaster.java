@@ -38,6 +38,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -82,23 +83,23 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Inject
   public TaskMaster(
-      final TaskLockConfig taskLockConfig,
-      final TaskQueueConfig taskQueueConfig,
-      final DefaultTaskConfig defaultTaskConfig,
-      final TaskLockbox taskLockbox,
-      final TaskStorage taskStorage,
-      final TaskActionClientFactory taskActionClientFactory,
-      @Self final DruidNode selfNode,
-      final TaskRunnerFactory runnerFactory,
-      final ServiceAnnouncer serviceAnnouncer,
-      final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
-      final ServiceEmitter emitter,
-      final SupervisorManager supervisorManager,
-      final OverlordDutyExecutor overlordDutyExecutor,
-      @IndexingService final DruidLeaderSelector overlordLeaderSelector,
-      final SegmentAllocationQueue segmentAllocationQueue,
-      final ObjectMapper mapper,
-      final TaskContextEnricher taskContextEnricher
+          final TaskLockConfig taskLockConfig,
+          final TaskQueueConfig taskQueueConfig,
+          final DefaultTaskConfig defaultTaskConfig,
+          final TaskLockbox taskLockbox,
+          final TaskStorage taskStorage,
+          final TaskActionClientFactory taskActionClientFactory,
+          @Self final DruidNode selfNode,
+          final TaskRunnerFactory runnerFactory,
+          final ServiceAnnouncer serviceAnnouncer,
+          final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
+          final ServiceEmitter emitter,
+          final SupervisorManager supervisorManager,
+          final OverlordDutyExecutor overlordDutyExecutor,
+          @IndexingService final DruidLeaderSelector overlordLeaderSelector,
+          final SegmentAllocationQueue segmentAllocationQueue,
+          final ObjectMapper mapper,
+          final TaskContextEnricher taskContextEnricher
   )
   {
     this.supervisorManager = supervisorManager;
@@ -107,7 +108,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     this.overlordLeaderSelector = overlordLeaderSelector;
 
     final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
-                           selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
+            selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
 
     this.leadershipListener = new DruidLeaderSelector.Listener()
     {
@@ -122,23 +123,23 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
         try {
           taskRunner = runnerFactory.build();
           taskQueue = new TaskQueue(
-              taskLockConfig,
-              taskQueueConfig,
-              defaultTaskConfig,
-              taskStorage,
-              taskRunner,
-              taskActionClientFactory,
-              taskLockbox,
-              emitter,
-              mapper,
-              taskContextEnricher
+                  taskLockConfig,
+                  taskQueueConfig,
+                  defaultTaskConfig,
+                  taskStorage,
+                  taskRunner,
+                  taskActionClientFactory,
+                  taskLockbox,
+                  emitter,
+                  mapper,
+                  taskContextEnricher
           );
 
           // Sensible order to start stuff:
           final Lifecycle leaderLifecycle = new Lifecycle("task-master");
           if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
             log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
-               .emit();
+                    .emit();
           }
 
           leaderLifecycle.addManagedInstance(taskRunner);
@@ -146,38 +147,38 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           leaderLifecycle.addManagedInstance(supervisorManager);
           leaderLifecycle.addManagedInstance(overlordDutyExecutor);
           leaderLifecycle.addHandler(
-              new Lifecycle.Handler()
-              {
-                @Override
-                public void start()
-                {
-                  segmentAllocationQueue.becomeLeader();
-                }
+                  new Lifecycle.Handler()
+                  {
+                    @Override
+                    public void start()
+                    {
+                      segmentAllocationQueue.becomeLeader();
+                    }
 
-                @Override
-                public void stop()
-                {
-                  segmentAllocationQueue.stopBeingLeader();
-                }
-              }
+                    @Override
+                    public void stop()
+                    {
+                      segmentAllocationQueue.stopBeingLeader();
+                    }
+                  }
           );
 
           leaderLifecycle.addHandler(
-              new Lifecycle.Handler()
-              {
-                @Override
-                public void start()
-                {
-                  initialized = true;
-                  serviceAnnouncer.announce(node);
-                }
+                  new Lifecycle.Handler()
+                  {
+                    @Override
+                    public void start()
+                    {
+                      initialized = true;
+                      serviceAnnouncer.announce(node);
+                    }
 
-                @Override
-                public void stop()
-                {
-                  serviceAnnouncer.unannounce(node);
-                }
-              }
+                    @Override
+                    public void stop()
+                    {
+                      serviceAnnouncer.unannounce(node);
+                    }
+                  }
           );
 
           leaderLifecycle.start();
@@ -315,7 +316,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getSuccessfulTaskCount()
+  public Map<Pair<String, String>, Long> getSuccessfulTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -326,7 +327,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getFailedTaskCount()
+  public Map<Pair<String, String>, Long> getFailedTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -337,7 +338,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getRunningTaskCount()
+  public Map<Pair<String, String>, Long> getRunningTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -348,7 +349,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getPendingTaskCount()
+  public Map<Pair<String, String>, Long> getPendingTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
@@ -359,7 +360,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   @Override
-  public Map<String, Long> getWaitingTaskCount()
+  public Map<Pair<String, String>, Long> getWaitingTaskCount()
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
